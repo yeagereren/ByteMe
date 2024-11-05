@@ -117,6 +117,7 @@ class ByteMeCanteenSystem {
     TreeMap<String, FoodItem> menu = new TreeMap<>();
     HashMap<String, String> customerAccounts = new HashMap<>();
     HashMap<String, List<Order>> orderHistory = new HashMap<>();
+    private List<Order> orders;
 
     public ByteMeCanteenSystem() {
         addItemToMenu("Burger", 5.00, "Snacks", true);
@@ -124,7 +125,9 @@ class ByteMeCanteenSystem {
         addItemToMenu("Soda", 1.50, "Beverages", true);
         addItemToMenu("Pizza", 8.00, "Meals", false);
         addItemToMenu("Coffee", 3.00, "Beverages", true);
+        this.orders = new ArrayList<>();
     }
+    
 
     public void addMenuItem(FoodItem item) {
         menu.put(item.getName(), item);
@@ -367,9 +370,32 @@ public class ByteMe {
         String adminPassword = scanner.nextLine();
         if (adminId.equals(ADMIN_ID) && adminPassword.equals(ADMIN_PASSWORD)) {
             System.out.println("Admin login successful!");
-            menuManagement(scanner, system);
+            adminMenu(scanner, system);
         } else {
             System.out.println("Invalid admin credentials.");
+        }
+    }
+
+    private static void adminMenu(Scanner scanner, ByteMeCanteenSystem system) {
+        while (true) {
+            System.out.println("\nAdmin Menu:");
+            System.out.println("1. Menu Management");
+            System.out.println("2. Order Management");
+            System.out.println("3. Logout");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            if (choice == 1) {
+                menuManagement(scanner, system);
+            } else if (choice == 2) {
+                orderManagement(scanner, system);
+            } else if (choice == 3) {
+                System.out.println("Logging out...");
+                break;
+            } else {
+                System.out.println("Invalid choice. Please try again.");
+            }
         }
     }
 
@@ -543,6 +569,91 @@ public class ByteMe {
             }
         }
     }
+
+    private static void orderManagement(Scanner scanner, ByteMeCanteenSystem system) {
+        while (true) {
+            System.out.println("\nOrder Management Options:");
+            System.out.println("1. View Pending Orders");
+            System.out.println("2. Update Order Status");
+            System.out.println("3. Process Refunds");
+            System.out.println("4. Go Back");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            if (choice == 1) {
+                viewPendingOrders(system);
+            } else if (choice == 2) {
+                updateOrderStatus(scanner, system);
+            } else if (choice == 3) {
+                processRefunds(scanner, system);
+            } else if (choice == 4) {
+                System.out.println("Returning to Admin Menu...");
+                break;
+            } else {
+                System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+    private static void viewPendingOrders(ByteMeCanteenSystem system) {
+        List<Order> pendingOrders = system.getPendingOrders();
+        if (pendingOrders.isEmpty()) {
+            System.out.println("No pending orders found.");
+        } else {
+            System.out.println("Pending Orders:");
+            for (Order order : pendingOrders) {
+                System.out.println(order);  // Implement toString() in Order class
+            }
+        }
+    }
+
+    private static void updateOrderStatus(Scanner scanner, ByteMeCanteenSystem system) {
+        System.out.print("Enter order number to update status: ");
+        int orderNumber = scanner.nextInt();
+        scanner.nextLine();
+
+        // Logic to fetch order by number and update status
+        Order order = system.getOrderByNumber(orderNumber);
+        if (order != null) {
+            System.out.println("Current Status: " + order.getStatus());
+            System.out.println("Update to (1: Preparing, 2: Out for Delivery, 3: Completed): ");
+            int statusChoice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (statusChoice) {
+                case 1:
+                    order.setStatus("Preparing");
+                    break;
+                case 2:
+                    order.setStatus("Out for Delivery");
+                    break;
+                case 3:
+                    order.setStatus("Completed");
+                    break;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+            System.out.println("Order status updated successfully!");
+        } else {
+            System.out.println("Order not found.");
+        }
+    }
+
+    private static void processRefunds(Scanner scanner, ByteMeCanteenSystem system) {
+        System.out.print("Enter order number to process refund: ");
+        int orderNumber = scanner.nextInt();
+        scanner.nextLine();
+
+        Order order = system.getOrderByNumber(orderNumber);
+        if (order != null && order.isCancellable()) {
+            order.processRefund();
+            System.out.println("Refund processed successfully!");
+        } else {
+            System.out.println("Order not found or cannot be refunded.");
+        }
+    }
+
 
     public static void orderTracking(Scanner scanner, ByteMeCanteenSystem system, String loginId) {
         while (true) {
