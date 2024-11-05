@@ -68,8 +68,16 @@ class FoodItem {
         this.reviews = new ArrayList<>();
     }
 
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
+    }
+
     public String getName() {
-        return name; // Getter for name
+        return name;
     }
 
     public void addReview(Review review) {
@@ -118,6 +126,21 @@ class ByteMeCanteenSystem {
         addItemToMenu("Coffee", 3.00, "Beverages", true);
     }
 
+    public void addMenuItem(FoodItem item) {
+        menu.put(item.getName(), item);
+    }
+
+    public boolean removeMenuItem(String itemName) {
+        if (menu.containsKey(itemName)) {
+            menu.remove(itemName);
+            return true;
+        }
+        return false;
+    }
+
+    public FoodItem getMenuItem(String itemName) {
+        return menu.get(itemName);
+    }
 
     public void addItemToMenu(String name, double price, String category, boolean available) {
         menu.put(name, new FoodItem(name, price, category, available));
@@ -231,6 +254,78 @@ public class ByteMe {
         scanner.close();
     }
 
+    public static void menuManagement(Scanner scanner, ByteMeCanteenSystem system) {
+        while (true) {
+            System.out.println("\nMenu Management Options:");
+            System.out.println("1. Add New Item");
+            System.out.println("2. Update Existing Item");
+            System.out.println("3. Remove Item");
+            System.out.println("4. Go Back");
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            if (choice == 1) {
+                // Add New Item
+                System.out.print("Enter item name: ");
+                String name = scanner.nextLine();
+                System.out.print("Enter item price: ");
+                double price = scanner.nextDouble();
+                scanner.nextLine();
+                System.out.print("Enter item category (Snacks/Beverages/Meals): ");
+                String category = scanner.nextLine();
+                System.out.print("Is the item available? (true/false): ");
+                boolean available = scanner.nextBoolean();
+                scanner.nextLine();
+
+                FoodItem newItem = new FoodItem(name, price, category, available);
+                system.addMenuItem(newItem);
+                System.out.println(name + " has been added to the menu.");
+
+            } else if (choice == 2) {
+                // Update Existing Item
+                System.out.print("Enter the name of the item to update: ");
+                String itemName = scanner.nextLine();
+                FoodItem itemToUpdate = system.getMenuItem(itemName);
+                if (itemToUpdate != null) {
+                    System.out.print("Enter new price (or press Enter to keep current): ");
+                    String priceInput = scanner.nextLine();
+                    if (!priceInput.isEmpty()) {
+                        double newPrice = Double.parseDouble(priceInput);
+                        itemToUpdate.setPrice(newPrice);
+                    }
+
+                    System.out.print("Is the item available? (true/false, or press Enter to keep current): ");
+                    String availableInput = scanner.nextLine();
+                    if (!availableInput.isEmpty()) {
+                        boolean newAvailability = Boolean.parseBoolean(availableInput);
+                        itemToUpdate.setAvailable(newAvailability);
+                    }
+
+                    System.out.println(itemName + " has been updated.");
+                } else {
+                    System.out.println("Item not found.");
+                }
+
+            } else if (choice == 3) {
+                // Remove Item
+                System.out.print("Enter the name of the item to remove: ");
+                String itemName = scanner.nextLine();
+                if (system.removeMenuItem(itemName)) {
+                    System.out.println(itemName + " has been removed from the menu.");
+                } else {
+                    System.out.println("Item not found.");
+                }
+
+            } else if (choice == 4) {
+                System.out.println("Returning to Admin Menu...");
+                break;
+            } else {
+                System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+
     private static void customerMenu(Scanner scanner, ByteMeCanteenSystem system, List<CartItem> cart) {
         while (true) {
             System.out.println("\nCustomer Menu:");
@@ -272,7 +367,7 @@ public class ByteMe {
         String adminPassword = scanner.nextLine();
         if (adminId.equals(ADMIN_ID) && adminPassword.equals(ADMIN_PASSWORD)) {
             System.out.println("Admin login successful!");
-            // Admin functionalities would go here.
+            menuManagement(scanner, system);
         } else {
             System.out.println("Invalid admin credentials.");
         }
@@ -289,7 +384,6 @@ public class ByteMe {
 
             int choice = scanner.nextInt();
             scanner.nextLine();
-
             if (choice == 1) {
                 browseMenu(scanner, system);
             } else if (choice == 2) {
