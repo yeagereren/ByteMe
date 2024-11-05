@@ -1,17 +1,83 @@
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Date;
+
+class Review {
+    private String customerName;
+    private String reviewText;
+    private int rating; // Assume rating is out of 5
+    private Date reviewDate;
+
+    public Review(String customerName, String reviewText, int rating) {
+        this.customerName = customerName;
+        this.reviewText = reviewText;
+        this.rating = rating;
+        this.reviewDate = new Date(); // Set the current date
+    }
+
+    @Override
+    public String toString() {
+        return "Review by " + customerName + " on " + reviewDate +
+                ": " + reviewText + " (Rating: " + rating + "/5)";
+    }
+}
+
+class Order {
+    List<CartItem> items;
+    String status;
+
+    public Order(List<CartItem> items) {
+        this.items = new ArrayList<>(items);
+        this.status = "Pending"; // Set initial status to pending
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void cancelOrder() {
+        this.status = "Canceled";
+    }
+
+    public List<CartItem> getItems() {
+        return items;
+    }
+
+    @Override
+    public String toString() {
+        return "Order{" +
+                "items=" + items +
+                ", status='" + status + '\'' +
+                '}';
+    }
+}
+
 
 class FoodItem {
     String name;
     double price;
     String category;
     boolean available;
+    List<Review> reviews;
 
     public FoodItem(String name, double price, String category, boolean available) {
         this.name = name;
         this.price = price;
         this.category = category;
         this.available = available;
+        this.reviews = new ArrayList<>();
+    }
+
+    public String getName() {
+        return name; // Getter for name
+    }
+
+    public void addReview(Review review) {
+        reviews.add(review);
+    }
+
+    public List<Review> getReviews() {
+        return reviews;
     }
 
     @Override
@@ -42,6 +108,7 @@ class CartItem {
 class ByteMeCanteenSystem {
     TreeMap<String, FoodItem> menu = new TreeMap<>();
     HashMap<String, String> customerAccounts = new HashMap<>();
+    HashMap<String, List<Order>> orderHistory = new HashMap<>();
 
     public ByteMeCanteenSystem() {
         addItemToMenu("Burger", 5.00, "Snacks", true);
@@ -50,6 +117,7 @@ class ByteMeCanteenSystem {
         addItemToMenu("Pizza", 8.00, "Meals", false);
         addItemToMenu("Coffee", 3.00, "Beverages", true);
     }
+
 
     public void addItemToMenu(String name, double price, String category, boolean available) {
         menu.put(name, new FoodItem(name, price, category, available));
@@ -79,7 +147,58 @@ class ByteMeCanteenSystem {
     public boolean loginCustomer(String loginId, String password) {
         return customerAccounts.containsKey(loginId) && customerAccounts.get(loginId).equals(password);
     }
+
+    public void createOrder(String loginId, List<CartItem> cart) {
+        Order order = new Order(cart);
+        orderHistory.computeIfAbsent(loginId, k -> new ArrayList<>()).add(order);
+    }
+
+    public List<Order> getOrderHistory(String loginId) {
+        return orderHistory.getOrDefault(loginId, new ArrayList<>());
+    }
+
+    public void leaveReview(Scanner scanner, String itemName) {
+        FoodItem item = menu.get(itemName);
+        if (item == null) {
+            System.out.println("Item not found in menu.");
+            return;
+        }
+
+        System.out.print("Enter your name: ");
+        String customerName = scanner.nextLine();
+
+        System.out.print("Enter your review: ");
+        String reviewText = scanner.nextLine();
+
+        System.out.print("Enter your rating (1-5): ");
+        int rating = scanner.nextInt();
+        scanner.nextLine(); // consume newline
+
+        Review review = new Review(customerName, reviewText, rating);
+        item.addReview(review);
+        System.out.println("Thank you for your review!");
+    }
+
+    // Method for viewing reviews
+    public void viewReviews(String itemName) {
+        FoodItem item = menu.get(itemName);
+        if (item == null) {
+            System.out.println("Item not found in menu.");
+            return;
+        }
+
+        List<Review> reviews = item.getReviews();
+        if (reviews.isEmpty()) {
+            System.out.println("No reviews yet for this item.");
+        } else {
+            System.out.println("Reviews for " + item.getName() + ":");
+            for (Review review : reviews) {
+                System.out.println(review);
+            }
+        }
+    }
 }
+
 
 public class ByteMe {
     private static final String ADMIN_ID = "admin";
@@ -134,7 +253,7 @@ public class ByteMe {
                 String password = scanner.nextLine();
                 if (system.loginCustomer(loginId, password)) {
                     System.out.println("\nLogin successful!");
-                    loggedInCustomerMenu(scanner, system, cart);
+                    loggedInCustomerMenu(scanner, system, cart, loginId);
                 } else {
                     System.out.println("Invalid login credentials.");
                 }
@@ -159,19 +278,33 @@ public class ByteMe {
         }
     }
 
-    private static void loggedInCustomerMenu(Scanner scanner, ByteMeCanteenSystem system, List<CartItem> cart) {
+    private static void loggedInCustomerMenu(Scanner scanner, ByteMeCanteenSystem system, List<CartItem> cart, String loginId) {
         while (true) {
             System.out.println("\n1. Browse Menu");
             System.out.println("2. Cart Operations");
-            System.out.println("3. Go Back to Customer Menu");
+            System.out.println("3. Order Tracking");
+            System.out.println("4. View Item Reviews");
+            System.out.println("5. Leave a Review");
+            System.out.println("6. Go Back to Customer Menu");
+
             int choice = scanner.nextInt();
             scanner.nextLine();
 
             if (choice == 1) {
                 browseMenu(scanner, system);
             } else if (choice == 2) {
-                cartOperations(scanner, system, cart);
+                cartOperations(scanner, system, cart, loginId);
             } else if (choice == 3) {
+                orderTracking(scanner, system, loginId);
+            } else if (choice == 4) {
+                System.out.print("Enter item name to view reviews: ");
+                String itemName = scanner.nextLine();
+                system.viewReviews(itemName);
+            } else if (choice == 5) {
+                System.out.print("Enter item name to leave a review for: ");
+                String itemName = scanner.nextLine();
+                system.leaveReview(scanner, itemName);
+            } else if (choice == 6) {
                 System.out.println("Returning to Customer Menu...");
                 break;
             } else {
@@ -179,6 +312,7 @@ public class ByteMe {
             }
         }
     }
+
 
     public static void browseMenu(Scanner scanner, ByteMeCanteenSystem system) {
         while (true) {
@@ -246,7 +380,7 @@ public class ByteMe {
         }
     }
 
-    public static void cartOperations(Scanner scanner, ByteMeCanteenSystem system, List<CartItem> cart) {
+    public static void cartOperations(Scanner scanner, ByteMeCanteenSystem system, List<CartItem> cart, String loginId) {
         while (true) {
             System.out.println("\nCart Operations:");
             System.out.println("1. Add Items");
@@ -305,7 +439,7 @@ public class ByteMe {
                     cart.forEach(System.out::println);
                 }
             } else if (choice == 5) {
-                checkout(scanner, cart);
+                checkout(scanner, cart, loginId, system);
                 break; // After checkout, go back to cart menu
             } else if (choice == 6) {
                 System.out.println("Returning to Customer Menu...");
@@ -316,7 +450,110 @@ public class ByteMe {
         }
     }
 
-    public static void checkout(Scanner scanner, List<CartItem> cart) {
+    public static void orderTracking(Scanner scanner, ByteMeCanteenSystem system, String loginId) {
+        while (true) {
+            System.out.println("\nOrder Tracking Options:");
+            System.out.println("1. View Order Status");
+            System.out.println("2. Cancel Order");
+            System.out.println("3. View Order History");
+            System.out.println("4. Reorder Previous Order");
+            System.out.println("5. Go Back");
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            if (choice == 1) {
+                List<Order> orders = system.getOrderHistory(loginId);
+                if (orders.isEmpty()) {
+                    System.out.println("You have no active orders.");
+                } else {
+                    // Display all orders
+                    for (int i = 0; i < orders.size(); i++) {
+                        System.out.println("Order #" + (i + 1) + ": " + orders.get(i).getStatus());
+                    }
+                }
+            } else if (choice == 2) {
+                List<Order> orders = system.getOrderHistory(loginId);
+                if (orders.isEmpty()) {
+                    System.out.println("You have no active orders to cancel.");
+                } else {
+                    System.out.print("Enter the order number you wish to cancel (e.g., 1, 2): ");
+                    int orderNumber = scanner.nextInt();
+                    scanner.nextLine();
+                    if (orderNumber > 0 && orderNumber <= orders.size()) {
+                        orders.get(orderNumber - 1).cancelOrder();
+                        System.out.println("Order #" + orderNumber + " has been canceled.");
+                    } else {
+                        System.out.println("Invalid order number.");
+                    }
+                }
+            } else if (choice == 3) {
+                List<Order> orders = system.getOrderHistory(loginId);
+                if (orders.isEmpty()) {
+                    System.out.println("No order history found.");
+                } else {
+                    System.out.println("Your Order History:");
+                    int orderNumber = 1;
+                    for (Order order : orders) {
+                        System.out.println("Order #" + orderNumber + ": " + order);
+                        orderNumber++;
+                    }
+                }
+            } else if (choice == 4) {
+                List<Order> orders = system.getOrderHistory(loginId);
+                if (orders.isEmpty()) {
+                    System.out.println("No order history found.");
+                } else {
+                    System.out.print("Enter the order number you wish to reorder (e.g., 1, 2): ");
+                    int orderNumber = scanner.nextInt();
+                    scanner.nextLine();
+                    if (orderNumber > 0 && orderNumber <= orders.size()) {
+                        Order orderToReorder = orders.get(orderNumber - 1);
+                        system.createOrder(loginId, new ArrayList<>(orderToReorder.getItems()));
+                        System.out.println("Order #" + orderNumber + " has been reordered successfully!");
+                    } else {
+                        System.out.println("Invalid order number.");
+                    }
+                }
+            } else if (choice == 5) {
+                System.out.println("Returning to Customer Menu...");
+                break;
+            } else {
+                System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+
+    public void leaveReview(FoodItem item) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter your name: ");
+        String customerName = scanner.nextLine();
+
+        System.out.print("Enter your review: ");
+        String reviewText = scanner.nextLine();
+
+        System.out.print("Enter your rating (1-5): ");
+        int rating = scanner.nextInt();
+
+        Review review = new Review(customerName, reviewText, rating);
+        item.addReview(review);
+        System.out.println("Thank you for your review!");
+    }
+
+    public void viewReviews(FoodItem item) {
+        List<Review> reviews = item.getReviews();
+        if (reviews.isEmpty()) {
+            System.out.println("No reviews yet for this item.");
+        } else {
+            System.out.println("Reviews for " + item.getName() + ":");
+            for (Review review : reviews) {
+                System.out.println(review);
+            }
+        }
+    }
+
+    public static void checkout(Scanner scanner, List<CartItem> cart, String loginId, ByteMeCanteenSystem system) {
         if (cart.isEmpty()) {
             System.out.println("Your cart is empty. Cannot proceed to checkout.");
             return;
@@ -334,12 +571,12 @@ public class ByteMe {
         int paymentMethod = scanner.nextInt();
         scanner.nextLine();
 
+        boolean paymentSuccessful = false;
         if (paymentMethod == 1) {
             System.out.print("Enter total amount to pay (exact): ");
             double cashPayment = scanner.nextDouble();
             if (cashPayment == totalAmount) {
-                System.out.println("Payment successful! Thank you for your order.");
-                cart.clear();
+                paymentSuccessful = true;
             } else {
                 System.out.println("Incorrect amount. Payment failed.");
             }
@@ -349,8 +586,7 @@ public class ByteMe {
             System.out.print("Enter total amount to pay (exact): ");
             double cardPayment = scanner.nextDouble();
             if (cardPayment == totalAmount) {
-                System.out.println("Payment successful! Thank you for your order.");
-                cart.clear();
+                paymentSuccessful = true;
             } else {
                 System.out.println("Incorrect amount. Payment failed.");
             }
@@ -358,6 +594,11 @@ public class ByteMe {
             System.out.println("Invalid payment method selected.");
         }
 
+        if (paymentSuccessful) {
+            System.out.println("Payment successful! Thank you for your order.");
+            system.createOrder(loginId, cart);
+            System.out.println("Order created successfully! You can track your order now.");
+            cart.clear();
+        }
     }
-
 }
